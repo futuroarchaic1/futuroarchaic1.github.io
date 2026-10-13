@@ -174,6 +174,51 @@
     </div>
   </div>
 
+  <div class="gate" id="reset" hidden>
+    <div class="gate-card">
+      <div class="gate-inner">
+        <div class="gate-logo" aria-hidden="true">
+          <svg width="38" height="38" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="26" stroke="var(--track)" stroke-width="6" />
+            <path d="M20 33.5l8 8 16-17" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h1 data-i18n="newPassword">Новый пароль</h1>
+        <p class="gate-sub" data-i18n="recoveryHint">Введите новый пароль для вашего аккаунта.</p>
+
+        <form id="resetForm" autocomplete="off" novalidate>
+          <div class="auth-stack">
+            <div class="auth-field" id="resNewField">
+              <label for="resPass" data-i18n="newPassword">Новый пароль</label>
+              <div class="pass-wrap">
+                <input id="resPass" type="password" autocomplete="new-password" maxlength="72" enterkeyhint="next">
+                <button type="button" class="pass-toggle" data-for="resPass" data-i18n-aria="showPassword"
+                  aria-label="Показать пароль"></button>
+              </div>
+              <div class="pass-meter" id="resMeter"><i></i><i></i><i></i><i></i></div>
+              <p class="pass-hint" id="resHint"></p>
+            </div>
+            <div class="auth-field" id="resNew2Field">
+              <label for="resPass2" data-i18n="passRepeat">Повторите пароль</label>
+              <div class="pass-wrap">
+                <input id="resPass2" type="password" autocomplete="new-password" maxlength="72" enterkeyhint="go">
+                <button type="button" class="pass-toggle" data-for="resPass2" data-i18n-aria="showPassword"
+                  aria-label="Показать пароль"></button>
+              </div>
+            </div>
+          </div>
+
+          <p class="auth-err" id="resErr" role="alert" aria-live="polite"></p>
+          <button class="auth-go" id="resGo" type="submit" data-i18n="savePassword">Сохранить пароль</button>
+          <button class="auth-link" id="resCancel" type="button" data-i18n="cancel"
+            style="display:block;width:100%;text-align:center;margin-top:6px">Отмена</button>
+        </form>
+      </div>
+      <div class="gate-by">by futuroarchaic</div>
+    </div>
+  </div>
+
   <!-- ====================== Приложение ====================== -->
   <div id="stage" hidden>
     <div class="app">

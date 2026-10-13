@@ -317,19 +317,20 @@
         if (hintEl) hintEl.textContent = pw ? r.hint : t('passRules');
         return r;
     }
-    function bindPassToggles(root) {
-        (root || document).querySelectorAll('.pass-toggle').forEach(btn => {
-            if (btn.dataset.bound) return;
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', () => {
-                const id = btn.getAttribute('data-for');
-                const input = id ? document.getElementById(id) : null;
-                if (!input) return;
-                const show = input.type === 'password';
-                input.type = show ? 'text' : 'password';
-                btn.classList.toggle('on', show);
-                btn.setAttribute('aria-label', show ? t('hidePassword') : t('showPassword'));
-            });
+    let passTogglesBound = false;
+    function bindPassToggles() {
+        if (passTogglesBound) return;
+        passTogglesBound = true;
+        document.addEventListener('mousedown', e => { if (e.target.closest('.pass-toggle')) e.preventDefault(); });
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.pass-toggle');
+            if (!btn) return;
+            const input = document.getElementById(btn.getAttribute('data-for'));
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.classList.toggle('on', show);
+            btn.setAttribute('aria-label', show ? t('hidePassword') : t('showPassword'));
         });
     }
     function resetPassToggles() {
@@ -409,8 +410,22 @@
             lockUntil = Date.now() + Math.min(300, 15 * Math.pow(2, step)) * 1000;
         }
     }
-
-    function showSetup() { $('#boot').hidden = true; $('#setup').hidden = false; $('#auth').hidden = true; $('#stage').hidden = true; }
+    function showReset() {
+        $('#boot').hidden = true;
+        $('#setup').hidden = true;
+        $('#auth').hidden = true;
+        $('#stage').hidden = true;
+        $('#reset').hidden = false;
+        ['resPass', 'resPass2'].forEach(id => { $('#' + id).value = ''; });
+        $('#resErr').textContent = '';
+        resetPassToggles();
+        paintMeter($('#resMeter'), $('#resHint'), '');
+        if (isFine()) setTimeout(() => $('#resPass').focus(), 60);
+    }
+    function showSetup() {
+        $('#boot').hidden = true; $('#reset').hidden = true;
+        $('#setup').hidden = false; $('#auth').hidden = true; $('#stage').hidden = true;
+    }
     function syncGateLang() {
         document.querySelectorAll('#gateLang button').forEach(b => b.classList.toggle('on', b.dataset.v === settings.lang));
     }
@@ -427,7 +442,6 @@
             seg.dataset.mode = mode;
             seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.m === mode ? 'true' : 'false'));
         }
-        // раскрытие/сворачивание полей делает CSS по классу .reg
         $('#authForm').classList.toggle('reg', reg);
         $('#nickWrap').toggleAttribute('inert', !reg);
         $('#authRow').toggleAttribute('inert', reg);
@@ -443,7 +457,8 @@
         syncGateLang();
     }
     function showAuth() {
-        $('#boot').hidden = true; $('#setup').hidden = true; $('#auth').hidden = false; $('#stage').hidden = true;
+        $('#boot').hidden = true; $('#reset').hidden = true;
+        $('#setup').hidden = true; $('#auth').hidden = false; $('#stage').hidden = true;
         state = emptyState(); pc.clear();
         remote = null;
         closeSheets();
@@ -452,15 +467,28 @@
         resetPassToggles();
         setAuthMode('signin');
         try { $('#authRemember').checked = rememberEnabled(); } catch (e) { }
-        // На телефоне не открываем клавиатуру автоматически
         if (isFine()) setTimeout(() => $('#authEmail').focus(), 50);
     }
     function showStage() {
-        $('#boot').hidden = true; $('#setup').hidden = true; $('#auth').hidden = true; $('#stage').hidden = false;
+        $('#boot').hidden = true; $('#reset').hidden = true;
+        $('#setup').hidden = true; $('#auth').hidden = true; $('#stage').hidden = false;
+    }
+    function showReset() {
+        $('#boot').hidden = true;
+        $('#setup').hidden = true;
+        $('#auth').hidden = true;
+        $('#stage').hidden = true;
+        $('#reset').hidden = false;
+        ['resPass', 'resPass2'].forEach(id => { $('#' + id).value = ''; });
+        $('#resErr').textContent = '';
+        resetPassToggles();
+        paintMeter($('#resMeter'), $('#resHint'), '');
+        if (isFine()) setTimeout(() => $('#resPass').focus(), 60);
     }
     async function handleSession(sess) {
         sessionUser = sess ? sess.user : null;
-        if (!sessionUser) { showAuth(); return; }
+        if (!sessionUser) { recoveryPending = false; showAuth(); return; }
+        if (recoveryPending) { showReset(); return; }
         try {
             await Promise.all([loadProfile(), loadRemote()]);
             syncToday(); freezePast(); persist();
@@ -468,7 +496,6 @@
             sel = today;
             render();
             showStage();
-            // ensure Day tab is active in UI
             try {
                 document.querySelectorAll('.tab').forEach(b => {
                     const on = b.dataset.tab === 'today';
@@ -478,16 +505,8 @@
                 const views = { today: $('#viewToday'), stats: $('#viewStats'), settings: $('#viewSettings') };
                 Object.keys(views).forEach(k => { if (views[k]) views[k].hidden = k !== 'today'; });
             } catch (e) { }
-            // Пришли по ссылке «сбросить пароль»: сразу открываем окно нового пароля
-            if (recoveryPending) {
-                recoveryPending = false;
-                setTab('settings');
-                setProfileOpen(true);
-                openEditSheet('password', true);
-            }
         } catch (err) {
             console.error(err);
-            authMsg(t('loadFailed'));
             showAuth();
             authMsg(t('loadFailed'));
         }
@@ -495,8 +514,8 @@
     async function start() {
         if (bootStarted) return;
         bootStarted = true;
-        // First paint: login screen until we know the session
-        showAuth();
+        if (/type=recovery/.test(location.hash)) recoveryPending = true;
+        setAuthMode('signin');
         sb = initSupabase();
         if (!sb) { showSetup(); return; }
         let bootDone = false;
@@ -506,11 +525,9 @@
                 if (bootDone) handleSession(sess);
                 return;
             }
-            // After boot, react to real sign-in / sign-out only
             if (!bootDone) return;
             if (ev === 'SIGNED_OUT') { handleSession(null); return; }
             if (ev === 'SIGNED_IN' || ev === 'USER_UPDATED') {
-                // Тот же пользователь (повторная проверка пароля, смена пароля/почты) — интерфейс не перезагружаем
                 if (sess && sess.user && sessionUser && sess.user.id === sessionUser.id) {
                     sessionUser = sess.user;
                     if (tab === 'settings') renderSettings();
@@ -958,10 +975,15 @@
         bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus();
     });
     window.addEventListener('scroll', () => hideMenu(), true);
+    let lastW = window.innerWidth;
     window.addEventListener('resize', () => {
         hideMenu();
         clearTimeout(window.__heatResize);
-        window.__heatResize = setTimeout(() => { if (tab === 'stats') renderStats(); }, 120);
+        window.__heatResize = setTimeout(() => {
+            if (window.innerWidth === lastW) return;
+            lastW = window.innerWidth;
+            if (tab === 'stats') renderStats();
+        }, 120);
     });
 
     // ---------- rings ----------
@@ -1124,14 +1146,11 @@
 
     // ---------- render: stats ----------
     function calcHeatLayout() {
-        // Fixed column counts (no adaptive count — keeps date mapping stable).
-        // Last column is always the current week (Mon–Sun of `today`).
-        // Cells ~2× previous size for comfortable taps.
         const isMobile = !window.matchMedia('(min-width: 520px)').matches;
         const isDesktop = window.matchMedia('(min-width: 960px)').matches;
-        if (isMobile) return { cols: 8, cell: 34, gap: 3 };
-        if (isDesktop) return { cols: 16, cell: 24, gap: 4 };
-        return { cols: 12, cell: 22, gap: 3 };
+        if (isDesktop) return { cols: 14, cell: 0, gap: 4 };
+        if (isMobile) return { cols: 7, cell: 0, gap: 4 };
+        return { cols: 9, cell: 0, gap: 4 };
     }
     function renderStats() {
         const el = $('#stats');
@@ -2096,6 +2115,42 @@
         root.classList.add('theme-anim');
         applyAppearance();
         setTimeout(() => root.classList.remove('theme-anim'), 450);
+    });
+    $('#authRemember').addEventListener('change', e => {
+        const row = $('#rememberRow');
+        row.classList.remove('pop');
+        if (e.target.checked) { void row.offsetWidth; row.classList.add('pop'); }
+    });
+
+    $('#resPass').addEventListener('input', () => paintMeter($('#resMeter'), $('#resHint'), $('#resPass').value));
+    $('#resetForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!sb) return;
+        const p1 = $('#resPass').value, p2 = $('#resPass2').value;
+        const err = $('#resErr'), btn = $('#resGo');
+        err.textContent = '';
+        const scored = scorePassword(p1, passCtx());
+        if (!scored.ok) { err.textContent = scored.hint; return; }
+        if (p1 !== p2) { err.textContent = t('passMismatch'); return; }
+        setLoading(btn, true);
+        try {
+            const { error } = await sb.auth.updateUser({ password: p1 });
+            if (error) { err.textContent = authErrText(error); return; }
+            recoveryPending = false;
+            try { history.replaceState(null, '', location.pathname); } catch (x) { }
+            const { data: { session } } = await sb.auth.getSession();
+            await handleSession(session);
+            toast(t('passChanged'));
+        } catch (x) {
+            err.textContent = authErrText(x);
+        } finally {
+            setLoading(btn, false);
+        }
+    });
+    $('#resCancel').addEventListener('click', async () => {
+        recoveryPending = false;
+        try { history.replaceState(null, '', location.pathname); } catch (x) { }
+        if (sb) await sb.auth.signOut();
     });
     $('#gateLang').addEventListener('click', e => {
         const b = e.target.closest('button[data-v]'); if (!b || b.dataset.v === settings.lang) return;

@@ -1327,3 +1327,339 @@ html.theme-anim *::after {
 .profile-head::after {
     display: none;
 }
+
+.remember-row {
+    position: relative;
+}
+
+.remember-row input {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin: -12px 0 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cbx {
+    position: relative;
+    flex: none;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    border-radius: 9px;
+    border: 2px solid color-mix(in srgb, var(--label) 28%, transparent);
+    display: grid;
+    place-items: center;
+    transition: border-color .22s var(--ease), transform .2s var(--ease), box-shadow .22s var(--ease);
+}
+
+/* градиентная заливка проявляется прозрачностью, а не растёт квадратом */
+.cbx::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: var(--accent-g);
+    opacity: 0;
+    transition: opacity .22s var(--ease);
+}
+
+.cbx svg {
+    position: relative;
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: var(--on-done);
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    transition: stroke-dashoffset .26s ease-out;
+}
+
+.remember-row input:checked+.cbx {
+    border-color: transparent;
+}
+
+.remember-row input:checked+.cbx::before {
+    opacity: 1;
+}
+
+.remember-row input:checked+.cbx svg {
+    stroke-dashoffset: 0;
+}
+
+.remember-row:active .cbx {
+    transform: scale(.9);
+}
+
+.remember-row input:focus-visible+.cbx {
+    box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* «поп» при установке (класс .pop ставит JS) */
+.remember-row.pop .cbx {
+    animation: pop .34s var(--spring);
+}
+
+.remember-row.pop .cbx svg {
+    animation: draw .26s .04s ease-out both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .remember-row:hover input:not(:checked)+.cbx {
+        border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    }
+}
+
+/* ---------- 2. Никнейм: плавное появление без «грязного» полупрозрачного поля ----------
+   Сначала растёт высота, а само поле проявляется чуть позже (когда места уже достаточно). */
+.collapse {
+    transition: grid-template-rows .45s var(--ease), margin .45s var(--ease);
+}
+
+.collapse>.collapse-in {
+    transform: none;
+    transition: opacity .16s ease, visibility 0s .45s;
+}
+
+.reg .collapse:not(.rev)>.collapse-in {
+    transform: none;
+    transition: opacity .34s .14s ease, visibility 0s;
+}
+
+.collapse.rev>.collapse-in {
+    transform: none;
+    transition: opacity .34s .14s ease, visibility 0s;
+}
+
+.reg .collapse.rev>.collapse-in {
+    transform: none;
+    transition: opacity .16s ease, visibility 0s .45s;
+}
+
+/* ---------- 3. Статистика: квадратики заполняют всю ширину карточки ---------- */
+.heat {
+    grid-template-columns: repeat(var(--cols, 8), minmax(0, 1fr));
+    grid-template-rows: repeat(7, auto);
+    grid-auto-flow: column;
+    gap: var(--heat-gap, 4px);
+    justify-content: stretch;
+    align-items: start;
+    width: 100%;
+}
+
+.cell {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 18%;
+}
+
+/* ---------- 4. Плавный фиолетовый hover: «+», «⋯», «Сегодня» ----------
+   Градиенты в transition не интерполируются, поэтому hover-слой
+   сделан отдельным псевдоэлементом с анимацией прозрачности. */
+.rbtn,
+.pill {
+    position: relative;
+    isolation: isolate;
+    background: none;
+}
+
+.rbtn:hover,
+.pill:hover {
+    background: none;
+}
+
+.rbtn::before,
+.pill::before,
+.rbtn::after,
+.pill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.rbtn::before,
+.pill::before {
+    background: var(--tint);
+}
+
+.rbtn::after,
+.pill::after {
+    background: var(--tint-h);
+    opacity: 0;
+    transition: opacity .38s var(--ease);
+}
+
+.rbtn:hover::after,
+.pill:hover::after {
+    opacity: 1;
+}
+
+.rbtn {
+    transition: transform .22s var(--ease), filter .38s var(--ease);
+}
+
+.pill {
+    transition: filter .38s var(--ease);
+}
+
+.rbtn:hover,
+.pill:hover {
+    transition: transform .22s var(--ease), filter .38s var(--ease);
+}
+
+/* ---------- 5. Настройки: плавный hover профиля и «Выйти» ---------- */
+.profile-head,
+.profile-action,
+.set-row.signout {
+    transition: background .35s var(--ease);
+}
+
+.profile-card-chev {
+    transition: transform .34s var(--ease), color .3s var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .profile-head:hover .profile-card-chev {
+        color: var(--accent);
+    }
+}
+
+/* ---------- 6. Дёргание текста: вес шрифта не меняется при выборе ----------
+   Из-за смены 500↔600/700 меняется ширина текста, и он «прыгает». */
+.tab,
+.tab.on {
+    font-weight: 600;
+}
+
+/* без «сжатия» всей кнопки при касании (иконка и подпись не дёргаются) */
+.tab:active,
+.tab.on:active {
+    transform: none;
+}
+
+.dn,
+.day.today .dn,
+.day.sel .dn {
+    font-weight: 600;
+}
+
+.dc,
+.dc.td,
+.dc.on {
+    font-weight: 500;
+}
+
+.mpick button,
+.mpick button.td,
+.mpick button.on {
+    font-weight: 500;
+}
+
+/* ---------- 7. Гигантская галочка в «Всё выполнено» на узких экранах ----------
+   Правило .ringbox svg (≤370px) задевало и галочку внутри кольца. */
+.ringbox .pct svg {
+    width: 34px;
+    height: 34px;
+}
+
+.gate {
+    --gate-drop: 0px;
+    --gx: 22px;
+    /* боковой отступ: по нему же выравниваются переключатели */
+}
+
+.gate-inner {
+    top: 0;
+}
+
+@media (max-width: 360px) {
+    .gate {
+        --gx: 16px;
+    }
+}
+
+/* ---------- 2. Телефон (до 599px): центр по вертикали и горизонтали ----------
+   Тема слева, RU/EN справа, оба на одном отступе с полями. */
+@media (max-width: 599px) {
+    .gate-card {
+        justify-content: center;
+        padding: calc(64px + env(safe-area-inset-top, 0px)) var(--gx) calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .gate-inner {
+        margin: auto;
+    }
+
+    .gate-card>.gate-by {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+        margin: 0;
+        padding: 0;
+    }
+
+    .gate-card>.gate-tools {
+        left: var(--gx);
+        right: var(--gx);
+        justify-content: space-between;
+    }
+}
+
+/* ---------- 3. Планшет (600–959px): карточка чуть длиннее ---------- */
+@media (min-width: 600px) and (max-width: 959px) {
+    .gate-card {
+        justify-content: center;
+        padding: 64px 36px 34px;
+    }
+
+    .gate-card>.gate-tools {
+        top: 20px;
+        right: 24px;
+    }
+
+    .gate-card>.gate-by {
+        margin-top: 20px;
+    }
+}
+
+/* ---------- 4. Чекбокс «Запомнить»: анимация помедленнее ---------- */
+.cbx {
+    transition: border-color .35s var(--ease), transform .3s var(--ease), box-shadow .3s var(--ease);
+}
+
+.cbx::before {
+    transition: opacity .4s var(--ease);
+}
+
+.cbx svg {
+    transition: stroke-dashoffset .45s ease-out .05s;
+}
+
+.remember-row.pop .cbx {
+    animation: pop .55s var(--spring);
+}
+
+.remember-row.pop .cbx svg {
+    animation: draw .45s .08s ease-out both;
+}
+
+/* ---------- 5. Статистика: столбики не «ломаются» при скролле ----------
+   Скруглённый overflow:hidden + анимированный дочерний элемент
+   на мобильных браузерах теряет обрезку при скролле. */
+.track {
+    isolation: isolate;
+    transform: translateZ(0);
+}
+
+.fill {
+    animation: grow .7s var(--ease) backwards;
+}
